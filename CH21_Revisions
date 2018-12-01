@@ -18,9 +18,9 @@ with static_data as
          when icud.hospital_expire_flg='Y' or dp.dod-icud.hospital_disch_dt < 30 then 'Y'     
          else 'N'
         end as thirty_day_mort
- from mimic2v26.icustay_detail icud
- left join mimic2v26.demographic_detail dd on icud.hadm_id=dd.hadm_id
- left join mimic2v26.d_patients dp on icud.subject_id=dp.subject_id
+ from mimiciiiv13.icustay_detail icud
+ left join mimiciiiv13.demographic_detail dd on icud.hadm_id=dd.hadm_id
+ left join mimiciiiv13.d_patients dp on icud.subject_id=dp.subject_id
  where icud.icustay_age_group = 'adult'    
    and icud.subject_icustay_seq = 1
    and icud.icustay_id is not null
@@ -35,7 +35,7 @@ with static_data as
         itemid,
         charttime,
         valuenum
- from mimic2v26.labevents l
+ from mimiciiiv13.labevents l
  where itemid in (50090,50149,50159,50383,50468,50083,50172,50112,50140,50079,50148,50010)
    and icustay_id in (select icustay_id from static_data) 
    and valuenum is not null
@@ -91,7 +91,7 @@ with static_data as
         end as type,                
         charttime,
         value1num
- from mimic2v26.chartevents l
+ from mimiciiiv13.chartevents l
  where itemid in (211,51,52,455,456,678,679,646,618)
    and icustay_id in (select icustay_id from static_data) 
    and value1num is not null
