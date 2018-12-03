@@ -8,19 +8,19 @@ with static_data as
          when icud.icustay_admit_age>150 then 91.4
          else round(icud.icustay_admit_age,1)
         end as icustay_admit_age,
-        icud.gender, 
-        dd.admission_type_descr as admission_type,
+        patients.gender, 
+        dd.admission_type as admission_type,
         case
-         when icud.icustay_first_service='FICU' then 'MICU'
-         else icud.icustay_first_service
+         when icud.FIRST_CAREUNIT='FICU' then 'MICU'
+         else icud.FIRST_CAREUNIT
         end as icustay_first_service,
         case
-         when icud.hospital_expire_flg='Y' or dp.dod-icud.hospital_disch_dt < 30 then 'Y'     
+         when dd.hospital_expire_flg='Y' or dp.dod-icud.outtime < 30 then 'Y'     
          else 'N'
         end as thirty_day_mort
- from mimiciiiv13.icustay_detail icud
- left join mimiciiiv13.demographic_detail dd on icud.hadm_id=dd.hadm_id
- left join mimiciiiv13.d_patients dp on icud.subject_id=dp.subject_id
+ from mimiciiiv13.icustays icud
+ left join mimiciiiv13.admissions dd on icud.hadm_id=dd.hadm_id
+ left join mimiciiiv13.patients dp on icud.subject_id=dp.subject_id
  where icud.icustay_age_group = 'adult'    
    and icud.subject_icustay_seq = 1
    and icud.icustay_id is not null
