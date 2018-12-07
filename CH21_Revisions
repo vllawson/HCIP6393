@@ -36,7 +36,7 @@ with static_data as
         charttime,
         valuenum
  from mimiciiiv13.labevents l
- where itemid in (50090,50149,50159,50383,50468,50083,50172,50112,50140,50079,50148,50010)
+ where itemid in (50912,50971,50983,50902,50882,51221,51300,50931,50960,50893,50970,50954)
    and icustay_id in (select icustay_id from static_data) 
    and valuenum is not null
 )
@@ -56,18 +56,18 @@ with static_data as
       pivot
       (sum(round(first_value,1)) as admit       
        for itemid in 
-       ('50090' as cr, 
-        '50149' as k,
-        '50159' as na,
-        '50083' as cl,
-        '50172' as bicarb,
-        '50383' as hct,
-        '50468' as wbc,
-        '50112' as glucose,
-        '50140' as mg,
-        '50079' as ca,
-        '50148' as p,
-        '50010' as lactate
+       ('50912' as cr, 
+        '50971' as k,
+        '50983' as na,
+        '50902' as cl,
+        '50882' as bicarb,
+        '51221' as hct,
+        '51300' as wbc,
+        '50931' as glucose,
+        '50960' as mg,
+        '50893' as ca,
+        '50970' as p,
+        '50954' as lactate
        )
       )
 )
