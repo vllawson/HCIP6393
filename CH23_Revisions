@@ -202,7 +202,7 @@ with first_admissions as
  from readmissions r
  join mimiciiiv13.labevents l 
    on r.first_hadm_id=l.hadm_id 
-  and l.itemid in (50090,50159,50655,50264,50277,50276,50177,50149,50083,50172,50383,50468,50140,50148,50079,50010,50018,50428,50060,50112) 
+  and l.itemid in (51081,50983,51492,51082,51100,51099,51006,50971,50902,50882,51221,51300,50960,50970,50893,50813,50820,51265,50862,50931) 
   and extract(day from l.charttime-r.first_hadm_admit_dt) = 0
 )
 --select * from raw_hosp_admit_labs order by 1,2;
@@ -351,7 +351,7 @@ with first_admissions as
         count(*) as num_cr_first_icustay,
         max(l.valuenum) as cr_peak_first_icustay        
  from readmissions r
- join mimiciiiv13.labevents l on r.first_icustay_id=l.icustay_id and l.itemid=50090
+ join mimiciiiv13.labevents l on r.first_icustay_id=l.icustay_id and l.itemid=51081
  group by r.subject_id
 )
 --select * from peak_creat_first_icustay;
@@ -361,7 +361,7 @@ with first_admissions as
 (select distinct r.subject_id,        
         first_value(l.valuenum) over (partition by l.icustay_id order by l.charttime desc) as cr_disch_first_icustay        
  from readmissions r
- join mimiciiiv13.labevents l on r.first_icustay_id=l.icustay_id and l.itemid=50090 and l.charttime between r.first_icustay_outtime - interval '48' hour and r.first_icustay_outtime
+ join mimiciiiv13.labevents l on r.first_icustay_id=l.icustay_id and l.itemid=51081 and l.charttime between r.first_icustay_outtime - interval '48' hour and r.first_icustay_outtime
 )
 --select * from disch_creat_first_icustay;
 
@@ -371,7 +371,7 @@ with first_admissions as
         icud.seq        
  from readmissions r
  join mimiciiiv13.icustay_days icud on r.first_icustay_id=icud.icustay_id
- join mimiciiiv13.labevents l on r.first_icustay_id=l.icustay_id and l.itemid=50090 and l.charttime between icud.begintime and icud.endtime 
+ join mimiciiiv13.labevents l on r.first_icustay_id=l.icustay_id and l.itemid=51081 and l.charttime between icud.begintime and icud.endtime 
 )
 --select * from days_with_cr_first_icustay;
 
@@ -388,7 +388,7 @@ with first_admissions as
 (select distinct r.subject_id,   
         first_value(l.valuenum) over (partition by l.icustay_id order by l.charttime) as admit_serum_cr_second_icustay
  from readmissions r
- join mimiciiiv13.labevents l on r.second_icustay_id=l.icustay_id and l.itemid=50090 and l.charttime between r.second_icustay_intime - interval '12' hour and r.second_icustay_intime + interval '12' hour  
+ join mimiciiiv13.labevents l on r.second_icustay_id=l.icustay_id and l.itemid=51081 and l.charttime between r.second_icustay_intime - interval '12' hour and r.second_icustay_intime + interval '12' hour  
 )
 --select * from admit_labs_second_icustay;
 
@@ -771,7 +771,7 @@ with first_admissions as
         first_value(l.valuenum) over (partition by fd.subject_id,l.itemid order by fd.first_dialysis_dt-l.charttime) as proximal_lab
  from first_dialysis fd
  join readmissions r on fd.subject_id=r.subject_id
- join mimiciiiv13.labevents l on r.first_hadm_id=l.hadm_id and l.itemid in (50090,50177) and l.charttime < fd.first_dialysis_dt
+ join mimiciiiv13.labevents l on r.first_hadm_id=l.hadm_id and l.itemid in (51081,51006) and l.charttime < fd.first_dialysis_dt
 )
 --select * from labs_proximal_to_dialysis;
 
@@ -785,8 +785,8 @@ with first_admissions as
  from (select distinct subject_id, icu_day_first_dialysis, hosp_day_first_dialysis, first_dialysis_dt, itemid, proximal_lab from labs_proximal_to_dialysis)
       pivot
       (avg(proximal_lab) for itemid in
-       ('50090' as cr_prior_to_dialysis,
-        '50177' as bun_prior_to_dialysis        
+       ('51081' as cr_prior_to_dialysis,
+        '51006' as bun_prior_to_dialysis        
        )
       )
 )
@@ -796,7 +796,7 @@ with first_admissions as
 (select subject_id,
         extract(day from min(first_dialysis_dt-charttime)) as days_btw_cr_and_dialysis
  from labs_proximal_to_dialysis
- where itemid=50090
+ where itemid=51081
  group by subject_id
 )
 --select * from cr_and_dialysis;
