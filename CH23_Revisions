@@ -7,35 +7,35 @@ with first_admissions as
 (select icud.subject_id,
         icud.hadm_id as first_hadm_id,
         icud.icustay_id as first_icustay_id,
-        icud.hospital_admit_dt as first_hadm_admit_dt,  
-        icud.hospital_disch_dt as first_hadm_disch_dt,
+        d.admittime as first_hadm_admit_dt,  
+        d.dischtime as first_hadm_disch_dt,
         icud.icustay_intime as first_icustay_intime,
         icud.icustay_outtime as first_icustay_outtime,
-        extract(day from icud.icustay_intime-icud.hospital_admit_dt) as days_btw_hosp_icu_admit,
-        extract(day from icud.hospital_disch_dt-icud.icustay_outtime) as days_btw_hosp_icu_disch,
-        icud.icustay_expire_flg as icu_mort_first_admission,
-        icud.hospital_expire_flg as hosp_mort_first_admission,
-        d.admission_source_descr as first_hadm_source,
+        extract(day from icud.intime-d.admittime) as days_btw_hosp_icu_admit,
+        extract(day from d.dischtime-icud.outtime) as days_btw_hosp_icu_disch,
+        d.hospital_expire_flg as hosp_mort_first_admission,
+        d.admission_type as first_hadm_source,
         case
-         when lower(d.admission_source_descr) like '%emergency%' then 'Y'
+         when lower(d.admission_type) like '%emergency%' then 'Y'
          else 'N'
         end as ED_admission,
         case
          when icud.icustay_admit_age>150 then 91.4
          else round(icud.icustay_admit_age,1)
         end as age_first_icustay,
-        icud.gender,        
-        d.ethnicity_descr as race,        
-        round(icud.icustay_los/60/24,2) as first_icustay_los,
+        p.gender,        
+        d.ethnicity as race,        
+        round(icud.los/60/24,2) as first_icustay_los,
         icud.icustay_first_service,
         icud.sapsi_first as first_icustay_admit_saps,
         case
          when msa.hadm_id is not null then 'Y'
          else 'N'
         end as first_hadm_sepsis
- from mimiciiiv13.icustay_detail icud
- left join mimiciiiv13.demographic_detail d on icud.hadm_id=d.hadm_id
+ from mimiciiiv13.icustays where itemid in (211,51,52,455,456,678,679,646,618) icud
+ left join mimiciiiv13.admissions d on icud.hadm_id=d.hadm_id
  left join mimic2devel.martin_sepsis_admissions msa on icud.hadm_id=msa.hadm_id
+ left join mimiciiiv13.patients p on icud.hadm_id=p.hadm_id
  where icud.subject_icustay_seq=1 
    and icud.icustay_age_group='adult'
    and icud.hadm_id is not null
@@ -49,17 +49,17 @@ with first_admissions as
 (select fa.*,
         icud.hadm_id as second_hadm_id,
         icud.icustay_id as second_icustay_id,
-        icud.hospital_admit_dt as second_hadm_admit_dt,
-        icud.icustay_intime as second_icustay_intime,        
+        d.admittime as second_hadm_admit_dt,
+        icud.intime as second_icustay_intime,        
         case
-         when icud.icustay_id is null or icud.hospital_admit_dt-fa.first_hadm_disch_dt > 90 then 'N'
+         when icud.icustay_id is null or d.admittime-fa.first_hadm_disch_dt > 90 then 'N'
          else 'Y'
         end as readmission_90d,
         case
-         when icud.icustay_id is null or icud.hospital_admit_dt-fa.first_hadm_disch_dt > 365 then 'N'
+         when icud.icustay_id is null or d.admittime-fa.first_hadm_disch_dt > 365 then 'N'
          else 'Y'
         end as readmission_1yr,
-        icud.hospital_admit_dt-fa.first_hadm_disch_dt as days_to_readmission,
+        d.admittime-fa.first_hadm_disch_dt as days_to_readmission,
         case
          when hosp_mort_first_admission='Y' or dp.dod-fa.first_hadm_disch_dt <= 0 then null
          when dp.dod-fa.first_hadm_disch_dt between 1 and 90 then 'Y'
@@ -86,25 +86,26 @@ with first_admissions as
          else null
         end as days_icu_disch_to_hosp_mort
  from first_admissions fa
- left join mimiciiiv13.icustay_detail icud 
+ left join mimiciiiv13.icustays icud 
         on fa.subject_id=icud.subject_id
        and icud.hospital_seq=2
        and icud.icustay_seq=1
        and icud.hadm_id is not null
        and icud.icustay_id is not null
- left join mimic2devel.d_patients dp on fa.subject_id=dp.subject_id
+ left join mimic2devel.patients dp on fa.subject_id=dp.subject_id
+ left join mimiciiiv13.admissions d 
 )
 --select * from readmissions;
 
 , raw_icu_admit_labs as
 (select distinct r.subject_id,        
         case
-         when l.itemid=50090 then 'serum_cr'
-         when l.itemid=50159 then 'serum_sodium'
-         when l.itemid=50655 then 'urine_protein'
-         when l.itemid=50264 then 'urine_cr'
-         when l.itemid=50277 then 'urine_sodium'
-         when l.itemid=50276 then 'urine_protein_cr_ratio'
+         when l.itemid=51081 then 'serum_cr'
+         when l.itemid=50983 then 'serum_sodium'
+         when l.itemid=51492 then 'urine_protein'
+         when l.itemid=51082 then 'urine_cr'
+         when l.itemid=51100 then 'urine_sodium'
+         when l.itemid=51099 then 'urine_protein_cr_ratio'
          when l.itemid=50177 then 'bun'         
          when l.itemid=50149 then 'potassium'
          when l.itemid=50083 then 'chloride'
