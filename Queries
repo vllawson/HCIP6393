@@ -1,1 +1,21 @@
+#this query identifies rows in lab events that were tested for troponin levels
+select *
+from d_labitems
+where label like '%troponin%'
+
+select *
+from labevents
+where itemid = 51002 or itemid = 51003
+
+#and this one looks through chartevents for the troponin test- probs some duplication-
+#probs best to use labevents because that has a column that identifies when the value is abnormal, and chartevents does not
+select *
+from d_items
+where label like '%troponin%'
+
+select *
+from chartevents
+where itemid = 851 or itemid = 227429
+
+
 
