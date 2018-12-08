@@ -1,55 +1,63 @@
 -- This query extracts data for the tutorial in the clinical data analytics book chapter. Only the first icu stays from adult patients are extracted.
 
-with static_data as
+
+create or replace view static_data as
 (select icud.subject_id,
         icud.hadm_id,
-        icud.icustay_id,                 
+        icud.icustay_id, 
         case
-         when icud.icustay_admit_age>150 then 91.4
-         else round(icud.icustay_admit_age,1)
+         when (extract(day from icud.intime-dp.dob)) > 150 then 91.4
+         else round((extract(day from icud.intime-dp.dob)),1)
         end as icustay_admit_age,
-        patients.gender, 
+        dp.gender, 
         dd.admission_type as admission_type,
         case
          when icud.FIRST_CAREUNIT='FICU' then 'MICU'
          else icud.FIRST_CAREUNIT
         end as icustay_first_service,
         case
-         when dd.hospital_expire_flg='Y' or dp.dod-icud.outtime < 30 then 'Y'     
+         when dd.hospital_expire_flag='Y' or dp.dod-icud.outtime < 30 then 'Y'     
          else 'N'
         end as thirty_day_mort
  from mimiciiiv13.icustays icud
  left join mimiciiiv13.admissions dd on icud.hadm_id=dd.hadm_id
  left join mimiciiiv13.patients dp on icud.subject_id=dp.subject_id
- where icud.icustay_age_group = 'adult'    
-   and icud.subject_icustay_seq = 1
+ where (extract(day from icud.intime-dp.dob)) > 17.999    
+	#this is where the icu_stay_seq went, but not sure how to update -- (select * from icustays i1, icustays i2 
+		#where not(i1.icustay_id = i2.icustay_id) and i1.subject_id = i2.subject_id
+        #group by subject_id
+        #having min(intime)
    and icud.icustay_id is not null
-)
---select * from static_data;
+);
+select * from static_data;
 
------------------------------
---- BEGIN EXTRACTION OF LABS
------------------------------
-, small_labevents as
-(select icustay_id,        
+#-----------------------------
+#--- BEGIN EXTRACTION OF LABS
+#-----------------------------
+create or replace view small_labevents as
+(select HADM_ID, #replaced icustay_id here since that is not in labevents table anymore- not sure b/c then messes up next bit        
         itemid,
         charttime,
         valuenum
  from mimiciiiv13.labevents l
  where itemid in (50912,50971,50983,50902,50882,51221,51300,50931,50960,50893,50970,50954)
-   and icustay_id in (select icustay_id from static_data) 
+   and hadm_id in (select hadm_id from static_data) 
    and valuenum is not null
-)
---select * from small_labevents;
+);
+select * from small_labevents;
 
-, labs_raw as
-(select distinct icustay_id,        
+create or replace view labs_raw as
+(select distinct hadm_id,        
         itemid,
-        first_value(valuenum) over (partition by icustay_id, itemid order by charttime) as first_value
+        first_value(valuenum) over (partition by hadm_id, itemid order by charttime) as 'first_value'
+        # can't get previous line to work without '', but that makes next section not work :(
  from small_labevents 
-)
---select * from labs_raw;
+);
+select * from labs_raw;
 
+#runs until here. think that my pivot doesn't work because this makes first_value not a variable and pivot section references it
+        #I could be wrong and just wrote my pivot wrong, but maybe someone should try to rewrite this pivot too and we can see
+        #if I just did it wrong... like a lot... I tried to change order and stuff a couple times, but nothing worked for me :/
 , labs as
 (select *
  from (select * from labs_raw)
