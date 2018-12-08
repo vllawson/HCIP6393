@@ -17,5 +17,13 @@ select *
 from chartevents
 where itemid = 851 or itemid = 227429
 
-
+#OSAMA: This query looks at Troponine test results that were abnormal (>=0.04)
+#It identifies the time from admission to ICU until Troponin test is conducted. Will need final touches and visualization
+Select d_items.label, admissions.ADMITTIME, min(chartevents.CHARTTIME), timestampdiff(minute,admissions.ADMITTIME,min(chartevents.CHARTTIME)) as leadTime 
+from chartevents, d_items, admissions
+where chartevents.HADM_ID=admissions.HADM_ID and d_items.ITEMID=chartevents.ITEMID
+and chartevents.itemID in 
+	(select ItemID from d_items where label like 'troponin%')
+and chartevents.valuenum>=0.04
+group by admissions.HADM_ID
 
