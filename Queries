@@ -18,7 +18,7 @@ from chartevents
 where itemid = 851 or itemid = 227429
 
 #OSAMA: This query looks at Troponine test results that were abnormal (>=0.04)
-#It identifies the time from admission to ICU until Troponin test is conducted. Will need final visualization
+#It identifies the time from admission to hospital until Troponin test is conducted. Will need final visualization
 
 Select d_items.label, admissions.ADMITTIME, min(chartevents.CHARTTIME),timestampdiff(minute,admissions.ADMITTIME,min(chartevents.CHARTTIME)) as LeadTime
 from chartevents, d_items, admissions
@@ -30,4 +30,9 @@ and admissions.has_chartevents_data=1
 group by admissions.HADM_ID
 having min(chartevents.CHARTTIME)>admissions.admittime /*to clean false data*/
 
+#OSAMA: This query compares average length of stays for patients grouped by their insurance type
+select insurance, avg(icustays.LOS)
+from icustays, admissions
+where icustays.HADM_ID=admissions.HADM_ID
+group by insurance
 
