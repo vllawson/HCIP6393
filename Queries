@@ -36,3 +36,11 @@ from icustays, admissions
 where icustays.HADM_ID=admissions.HADM_ID
 group by insurance
 
+#OSAMA: This query looks at time from a patient callout process starts until a decision is made.
+#It also groups it by insurance however, no trends were discovered by insurance
+#Process improvement specialists may benefit from it it they want to reduce this time and save resources
+
+select insurance, avg(timestampdiff(hour, createtime, outcometime))
+from admissions, callout
+where admissions.HADM_ID=callout.HADM_ID
+group by insurance
