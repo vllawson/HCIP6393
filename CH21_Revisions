@@ -22,11 +22,7 @@ create or replace view static_data as
  from mimiciiiv13.icustays icud
  left join mimiciiiv13.admissions dd on icud.hadm_id=dd.hadm_id
  left join mimiciiiv13.patients dp on icud.subject_id=dp.subject_id
- where (extract(day from icud.intime-dp.dob)) > 17.999    
-	#this is where the icu_stay_seq went, but not sure how to update -- (select * from icustays i1, icustays i2 
-		#where not(i1.icustay_id = i2.icustay_id) and i1.subject_id = i2.subject_id
-        #group by subject_id
-        #having min(intime)
+ where (extract(year from icud.intime-dp.dob)) > 17.999    
    and icud.icustay_id is not null
 );
 select * from static_data;
@@ -57,18 +53,18 @@ select * from labs_raw;
 create or replace view labs as
 (select
 	  hadm_id,
-      sum(case when itemid ='50912' then round(first_val,1) else 0 end) as cr, 
-      sum(case when itemid ='50971' then round(first_val,1) else 0 end) as k,
-      sum(case when itemid ='50983' then round(first_val,1) else 0 end) as na,
-      sum(case when itemid ='50902' then round(first_val,1) else 0 end) as cl,
-      sum(case when itemid ='50882' then round(first_val,1) else 0 end) as bicarb,
-      sum(case when itemid ='51221' then round(first_val,1) else 0 end) as hct,
-      sum(case when itemid ='51300' then round(first_val,1) else 0 end) as wbc,
-      sum(case when itemid ='50931' then round(first_val,1) else 0 end) as glucose,
-      sum(case when itemid ='50960' then round(first_val,1) else 0 end) as mg,
-      sum(case when itemid ='50893' then round(first_val,1) else 0 end) as ca,
-      sum(case when itemid ='50970' then round(first_val,1) else 0 end) as p,
-      sum(case when itemid ='50954' then round(first_val,1) else 0 end) as lactate
+      sum(case when itemid ='50912' then round(first_val,1) else 0 end) as cr_admit, 
+      sum(case when itemid ='50971' then round(first_val,1) else 0 end) as k_admit,
+      sum(case when itemid ='50983' then round(first_val,1) else 0 end) as na_admit,
+      sum(case when itemid ='50902' then round(first_val,1) else 0 end) as cl_admit,
+      sum(case when itemid ='50882' then round(first_val,1) else 0 end) as bicarb_admit,
+      sum(case when itemid ='51221' then round(first_val,1) else 0 end) as hct_admit,
+      sum(case when itemid ='51300' then round(first_val,1) else 0 end) as wbc_admit,
+      sum(case when itemid ='50931' then round(first_val,1) else 0 end) as glucose_admit,
+      sum(case when itemid ='50960' then round(first_val,1) else 0 end) as mg_admit,
+      sum(case when itemid ='50893' then round(first_val,1) else 0 end) as ca_admit,
+      sum(case when itemid ='50970' then round(first_val,1) else 0 end) as p_admit,
+      sum(case when itemid ='50954' then round(first_val,1) else 0 end) as lactate_admit
 from labs_raw
 group by hadm_id);
 
@@ -91,7 +87,7 @@ create or replace view small_chartevents as
          when itemid in (678,679) then 'temp'  -- in Fahrenheit
          when itemid in (646) then 'spo2'     
          when itemid in (618) then 'rr'
-        end as type,                
+        end as vital_type,                
         charttime,
         valuenum
  from mimiciiiv13.chartevents l
@@ -103,23 +99,23 @@ select * from small_chartevents;
 
 create or replace view vitals_raw as
 (select distinct hadm_id,        
-        type,
-        first_value(valuenum) over (partition by hadm_id, type order by charttime) as first_val
+        vital_type,
+        first_value(valuenum) over (partition by hadm_id, vital_type order by charttime) as first_val
  from small_chartevents 
 );
 select * from vitals_raw;
 
 create or replace view vitals as
-(select
+select
 	hadm_id,
-    sum(case when type = 'hr' then round(first_val,1) else 0 end) as hr,
-    sum(case when type = 'map' then round(first_val,1) else 0 end) as map,
-    sum(case when type = 'sbp' then round(first_val,1) else 0 end) as sbp,
-    sum(case when type = 'temp' then round(first_val,1) else 0 end) as temp,
-    sum(case when type = 'spo2' then round(first_val,1) else 0 end) as spo2,
-    sum(case when type = 'rr' then round(first_val,1) else 0 end) as rr
+    sum(case when vital_type = 'hr' then round(first_val,1) else 0 end) as hr_admit,
+    sum(case when vital_type = 'map' then round(first_val,1) else 0 end) as map_admit,
+    sum(case when vital_type = 'sbp' then round(first_val,1) else 0 end) as sbp_admit,
+    sum(case when vital_type = 'temp' then round(first_val,1) else 0 end) as temp_admit,
+    sum(case when vital_type = 'spo2' then round(first_val,1) else 0 end) as spo2_admit,
+    sum(case when vital_type = 'rr' then round(first_val,1) else 0 end) as rr_admit
 from vitals_raw
-group_by hadm_id);
+group by hadm_id;
 
 select * from vitals;
 #------------------------------------
@@ -148,7 +144,7 @@ create or replace view static_dataview_final_data as
         l.p_admit,
         l.lactate_admit
  from static_data s
- left join vitals v on s.icustay_id=v.icustay_id 
- left join labs l on s.icustay_id=l.icustay_id 
+ left join vitals v on s.hadm_id=v.hadm_id 
+ left join labs l on s.hadm_id=l.hadm_id 
 );
-select * from final_data order by 1,2,3;
+select * from static_dataview_final_data order by 1,2,3;
