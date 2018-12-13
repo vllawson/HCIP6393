@@ -49,46 +49,41 @@ select * from small_labevents;
 create or replace view labs_raw as
 (select distinct hadm_id,        
         itemid,
-        first_value(valuenum) over (partition by hadm_id, itemid order by charttime) as 'first_value'
-        # can't get previous line to work without '', but that makes next section not work :(
+        first_value(valuenum) over (partition by hadm_id, itemid order by charttime) as first_val
  from small_labevents 
 );
 select * from labs_raw;
 
-#runs until here. think that my pivot doesn't work because this makes first_value not a variable and pivot section references it
-        #I could be wrong and just wrote my pivot wrong, but maybe someone should try to rewrite this pivot too and we can see
-        #if I just did it wrong... like a lot... I tried to change order and stuff a couple times, but nothing worked for me :/
-, labs as
-(select *
- from (select * from labs_raw)
-      pivot
-      (sum(round(first_value,1)) as admit       
-       for itemid in 
-       ('50912' as cr, 
-        '50971' as k,
-        '50983' as na,
-        '50902' as cl,
-        '50882' as bicarb,
-        '51221' as hct,
-        '51300' as wbc,
-        '50931' as glucose,
-        '50960' as mg,
-        '50893' as ca,
-        '50970' as p,
-        '50954' as lactate
-       )
-      )
-)
---select * from labs;
-------------------------------
---- END OF EXTRACTION OF LABS
-------------------------------
+create or replace view labs as
+(select
+	  hadm_id,
+      sum(case when itemid ='50912' then round(first_val,1) else 0 end) as cr, 
+      sum(case when itemid ='50971' then round(first_val,1) else 0 end) as k,
+      sum(case when itemid ='50983' then round(first_val,1) else 0 end) as na,
+      sum(case when itemid ='50902' then round(first_val,1) else 0 end) as cl,
+      sum(case when itemid ='50882' then round(first_val,1) else 0 end) as bicarb,
+      sum(case when itemid ='51221' then round(first_val,1) else 0 end) as hct,
+      sum(case when itemid ='51300' then round(first_val,1) else 0 end) as wbc,
+      sum(case when itemid ='50931' then round(first_val,1) else 0 end) as glucose,
+      sum(case when itemid ='50960' then round(first_val,1) else 0 end) as mg,
+      sum(case when itemid ='50893' then round(first_val,1) else 0 end) as ca,
+      sum(case when itemid ='50970' then round(first_val,1) else 0 end) as p,
+      sum(case when itemid ='50954' then round(first_val,1) else 0 end) as lactate
+from labs_raw
+group by hadm_id);
 
-------------------------------------
---- BEGIN EXTRACTION OF VITALS
-------------------------------------
-, small_chartevents as
-(select icustay_id,
+select * from labs;
+
+
+#------------------------------
+#--- END OF EXTRACTION OF LABS
+#------------------------------
+
+#------------------------------------
+#--- BEGIN EXTRACTION OF VITALS
+#------------------------------------
+create or replace view small_chartevents as
+(select hadm_id,
         case
          when itemid in (211) then 'hr'
          when itemid in (52,456) then 'map'  -- invasive and noninvasive measurements are combined
@@ -98,44 +93,41 @@ select * from labs_raw;
          when itemid in (618) then 'rr'
         end as type,                
         charttime,
-        value1num
+        valuenum
  from mimiciiiv13.chartevents l
  where itemid in (211,51,52,455,456,678,679,646,618)
-   and icustay_id in (select icustay_id from static_data) 
-   and value1num is not null
-)
---select * from small_chartevents;
+   and hadm_id in (select hadm_id from static_data) 
+   and valuenum is not null
+);
+select * from small_chartevents;
 
-, vitals_raw as
-(select distinct icustay_id,        
+create or replace view vitals_raw as
+(select distinct hadm_id,        
         type,
-        first_value(value1num) over (partition by icustay_id, type order by charttime) as first_value
+        first_value(valuenum) over (partition by hadm_id, type order by charttime) as first_val
  from small_chartevents 
-)
---select * from vitals_raw;
+);
+select * from vitals_raw;
 
-, vitals as
-(select *
- from (select * from vitals_raw)
-      pivot
-      (sum(round(first_value,1)) as admit
-       for type in 
-       ('hr' as hr,
-        'map' as map,
-        'sbp' as sbp,
-        'temp' as temp,
-        'spo2' as spo2,
-        'rr' as rr
-       )
-      )
-)
---select * from vitals;
-------------------------------------
---- END OF EXTRACTION OF VITALS
-------------------------------------
+create or replace view vitals as
+(select
+	hadm_id,
+    sum(case when type = 'hr' then round(first_val,1) else 0 end) as hr,
+    sum(case when type = 'map' then round(first_val,1) else 0 end) as map,
+    sum(case when type = 'sbp' then round(first_val,1) else 0 end) as sbp,
+    sum(case when type = 'temp' then round(first_val,1) else 0 end) as temp,
+    sum(case when type = 'spo2' then round(first_val,1) else 0 end) as spo2,
+    sum(case when type = 'rr' then round(first_val,1) else 0 end) as rr
+from vitals_raw
+group_by hadm_id);
+
+select * from vitals;
+#------------------------------------
+#--- END OF EXTRACTION OF VITALS
+#------------------------------------
 
 -- Assemble final data
-, final_data as
+create or replace view static_dataview_final_data as
 (select s.*,
         v.hr_admit,
         v.map_admit,
@@ -158,5 +150,5 @@ select * from labs_raw;
  from static_data s
  left join vitals v on s.icustay_id=v.icustay_id 
  left join labs l on s.icustay_id=l.icustay_id 
-)
+);
 select * from final_data order by 1,2,3;
